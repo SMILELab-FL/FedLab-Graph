@@ -45,12 +45,13 @@ gs = GraphPartitionerNodeLevel(data_name=args.dataset,
                                data_path=Path(args.data_root) / args.task,
                                client_num=total_client_num,
                                split_type='random')
+                               # random_type=0,
+                               # split_param=1)
 
 # get model
 args.cuda = True if torch.cuda.is_available() else False
 device = get_best_gpu() if args.cuda else 'cpu'
-model = get_gnn(args, gs.global_dataset).to(device)
-temp_model = copy.deepcopy(model)
+model = get_gnn(args, num_classes=gs.num_classes, num_features=gs.num_features).to(device)
 
 # FL settings
 num_per_round = int(args.total_client * args.sample_ratio)
@@ -69,30 +70,17 @@ trainer = NodeFullBatchSubsetSerialTrainer(model=model,
 # train procedure
 to_select = [i for i in range(total_client_num)]
 acc_list = []
-best_val = 100
-
-# best model pt
-checkpt_folder = BASE_DIR / f'trained_model_dict/{args.task}/{args.dataset}/'
-checkpt_folder.mkdir(parents=True, exist_ok=True)
-checkpt_file = checkpt_folder / f'{uuid.uuid4().hex}.pt'
-
-test_pre_round = 10
+test_freq = 10
 for rd in range(args.com_round):
     model_parameters = SerializationTool.serialize_model(model)
     # valid evaluate
     loss, acc = trainer.evaluate(model_parameters, is_valid=True)
     print("Before round{} - val loss: {:.4f}, acc: {:.2f}".format(rd, loss, acc))
-    if loss < best_val:
-        best_val = loss
-        torch.save(model.state_dict(), checkpt_file)
 
     # test evaluate
-    if rd % test_pre_round == 0 and rd != 0:
-        temp_model.load_state_dict(torch.load(checkpt_file))
-        temp_model_parameters = SerializationTool.serialize_model(temp_model)
-        loss, acc = trainer.evaluate(temp_model_parameters, is_valid=False)
-        acc_list.append(acc)
-        print("Round {} Best model - test loss: {:.4f}, acc: {:.2f}".format(rd, loss, acc))
+    if rd % test_freq == 0 and rd != 0:
+        loss, acc = trainer.evaluate(model_parameters, is_valid=False)
+        print("Round {} - test loss: {:.4f}, acc: {:.2f}".format(rd, loss, acc))
 
     # FL-train
     selection = random.sample(to_select, num_per_round)

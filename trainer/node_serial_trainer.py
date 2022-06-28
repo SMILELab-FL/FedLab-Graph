@@ -61,11 +61,13 @@ class NodeFullBatchSubsetSerialTrainer(SerialTrainer):
             mask = data.val_mask if is_valid else data.test_mask
 
             output = self.model(data)
+            labels = data.y[mask]
+            loss = criterion(output[mask], labels)
+
             pred = output.argmax(dim=1)
-            loss = criterion(output[mask], data.y[mask])
 
             loss_.update(loss.item())
-            acc_.update(torch.sum(pred[mask].eq(data.y[mask])).item(), int(mask.sum()))
+            acc_.update(torch.sum(pred[mask].eq(labels)).item(), int(mask.sum()))
 
         return loss_.avg, acc_.avg
 

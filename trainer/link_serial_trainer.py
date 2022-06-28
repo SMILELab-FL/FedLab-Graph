@@ -7,13 +7,6 @@ from fedlab.utils.serialization import SerializationTool
 from fedlab.utils.functional import AverageMeter
 
 
-MODE2MASK = {
-    'train': 'train_edge_mask',
-    'val': 'valid_edge_mask',
-    'test': 'test_edge_mask'
-}
-
-
 class LinkFullBatchSubsetSerialTrainer(SerialTrainer):
     def __init__(self,
                  model,

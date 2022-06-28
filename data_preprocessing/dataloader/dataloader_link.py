@@ -1,12 +1,13 @@
 import torch
 
 from torch_geometric.data import Data
+from torch_geometric import transforms
 from torch_geometric.loader import GraphSAINTRandomWalkSampler, NeighborSampler
 from fedlab.utils.dataset.partition import DataPartitioner
 from data_preprocessing.splitters.splitter_builder import get_splitter
 
 
-class GraphPartitionerLinkLevel(DataPartitioner):
+class LinkLevelPartitioner(DataPartitioner):
     """Graph data partitioner for link-level tasks.
 
         Partition link-task graph data given specific client number and splitter method.
@@ -52,11 +53,11 @@ class GraphPartitionerLinkLevel(DataPartitioner):
         self.splitter = get_splitter(split_type, client_num, **kwargs)
         self.loader_config = loader_config
         self.transforms_funcs = transforms_funcs
-        self._perform_partition(**kwargs)
+        self._perform_partition()
 
         self.client_num = client_num
-        self.num_classes = self.global_dataset.data.edge_type.max().item() + 1
-        self.num_features = self.global_dataset.data.x.shape[-1]
+        self.num_classes = len(self.global_dataset[0].edge_type.unique())
+        self.num_features = self.global_dataset[0].x.shape[-1]
 
     def __getitem__(self, index):
         return self.data_local_dict[index]
@@ -64,18 +65,22 @@ class GraphPartitionerLinkLevel(DataPartitioner):
     def __len__(self):
         return len(self.data_local_dict)
 
-    def _perform_partition(self, num_split=[0.5, 0.2, 0.3], **kwargs):
+    def _perform_partition(self, tvt_num_split=[0.8, 0.1, 0.1]):
+        if 'pre_transform' not in self.transforms_funcs:
+            print(f'pre_transform is None! Using the default Constant pre_transform function')
+            self.transforms_funcs['pre_transform'] = transforms.Constant(value=1.0,
+                                                                         cat=False)
         if self.data_name in ['epinions', 'ciao']:
             from data_preprocessing.dataset.recom_sys import RecSys
             self.global_dataset = RecSys(self.data_path,
                                          self.data_name,
                                          FL=False,
-                                         splits=num_split,
+                                         splits=tvt_num_split,
                                          **self.transforms_funcs)
             self.split_dataset = RecSys(self.data_path,
                                         self.data_name,
                                         FL=True,
-                                        splits=num_split,
+                                        splits=tvt_num_split,
                                         **self.transforms_funcs)
 
         elif self.data_name in ['fb15k-237', 'wn18', 'fb15k', 'toy']:
@@ -89,10 +94,10 @@ class GraphPartitionerLinkLevel(DataPartitioner):
         self.data_local_dict = dict()
 
         for client_idx in range(len(dataset)):
-            local_data = self.raw2loader(dataset[client_idx])
+            local_data = self._raw2loader(dataset[client_idx])
             self.data_local_dict[client_idx] = local_data
 
-    def raw2loader(self, raw_data):
+    def _raw2loader(self, raw_data):
         """Transform a graph into either dataloader for graph-sampling-based mini-batch training
         or still a graph for full-batch training.
         Arguments:

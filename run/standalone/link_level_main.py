@@ -16,13 +16,13 @@ from fedlab.utils.serialization import SerializationTool
 from fedlab.utils.functional import get_best_gpu
 from model.model_builder import get_gnn
 from trainer.link_serial_trainer import LinkFullBatchSubsetSerialTrainer
-from data_preprocessing.dataloader.dataloader_link import GraphPartitionerLinkLevel
+from data_preprocessing.dataloader.dataloader_link import LinkLevelPartitioner
 from run.utils.transform_builder import get_transform
 
 # configuration
 parser = argparse.ArgumentParser(description="Standalone link training example")
 parser.add_argument("--task", type=str, default='link_level')
-parser.add_argument("--dataset", type=str, default='ciao')
+parser.add_argument("--dataset", type=str, default='wn18')
 parser.add_argument("--data_root", type=str, default='../../data/')
 parser.add_argument("--total_client", type=int, default=10)
 parser.add_argument("--com_round", type=int, default=50)
@@ -50,12 +50,12 @@ loader_config = {
 # necessary for link-level dataset to generate `data.x`
 transforms_funcs = get_transform({'pre_transform': ['Constant', {'value': 1.0, 'cat': False}]},
                                  'torch_geometric')
-gs = GraphPartitionerLinkLevel(data_name=args.dataset,
-                               data_path=Path(args.data_root) / args.task,
-                               client_num=total_client_num,
-                               split_type='rel_type',
-                               loader_config=loader_config,
-                               transforms_funcs=transforms_funcs)
+gs = LinkLevelPartitioner(data_name=args.dataset,
+                          data_path=Path(args.data_root) / args.task,
+                          client_num=total_client_num,
+                          split_type='rel_type',
+                          loader_config=loader_config,
+                          transforms_funcs=transforms_funcs)
 
 # get model
 args.cuda = True if torch.cuda.is_available() else False

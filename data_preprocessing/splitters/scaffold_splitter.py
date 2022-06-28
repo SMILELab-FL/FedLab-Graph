@@ -61,7 +61,7 @@ class ScaffoldSplitter:
             data_list (List(List(PyG.data))): Splited dataset via scaffold split.
         """
         dataset = [ds for ds in dataset]
-        idx_slice = gen_scaffold_split(dataset)
+        idx_slice = gen_scaffold_split(dataset, self.client_num)
         data_list = [[dataset[idx] for idx in idxs] for idxs in idx_slice]
         return data_list
 

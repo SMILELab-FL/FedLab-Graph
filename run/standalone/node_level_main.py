@@ -16,8 +16,7 @@ from fedlab.utils.serialization import SerializationTool
 from fedlab.utils.functional import get_best_gpu
 from model.model_builder import get_gnn
 from trainer.node_serial_trainer import NodeFullBatchSubsetSerialTrainer
-from data_preprocessing.dataloader.dataloader_node import GraphPartitionerNodeLevel
-
+from data_preprocessing.dataloader.dataloader_node import NodeLevelPartitioner
 
 # configuration
 parser = argparse.ArgumentParser(description="Standalone training example")
@@ -41,12 +40,14 @@ random_seed_init(42)
 
 # get dataset
 total_client_num = args.total_client
-gs = GraphPartitionerNodeLevel(data_name=args.dataset,
-                               data_path=Path(args.data_root) / args.task,
-                               client_num=total_client_num,
-                               split_type='random')
-                               # random_type=0,
-                               # split_param=1)
+gs = NodeLevelPartitioner(data_name=args.dataset,
+                          data_path=Path(args.data_root) / args.task,
+                          client_num=total_client_num,
+                          split_type='louvain',
+                          delta=10
+                          # random_type=0,
+                          # split_param=1,
+                          )
 
 # get model
 args.cuda = True if torch.cuda.is_available() else False

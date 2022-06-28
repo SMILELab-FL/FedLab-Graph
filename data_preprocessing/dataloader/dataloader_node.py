@@ -7,7 +7,7 @@ from fedlab.utils.dataset.partition import DataPartitioner
 INF = np.iinfo(np.int64).max
 
 
-class GraphPartitionerNodeLevel(DataPartitioner):
+class NodeLevelPartitioner(DataPartitioner):
     """Graph data partitioner for node-level tasks.
 
         Partition node-task graph data given specific client number and splitter method.
@@ -56,12 +56,11 @@ class GraphPartitionerNodeLevel(DataPartitioner):
         self.data_name = data_name.lower()
         self.data_path = data_path
         self.splitter = get_splitter(split_type, client_num, **kwargs)
-        self._perform_partition(**kwargs)
+        self._perform_partition()
 
         self.client_num = client_num
         self.num_classes = self.global_dataset.num_classes
         self.num_features = self.global_dataset.num_features
-        self.num_node_features = self.global_dataset.num_node_features
 
     def __getitem__(self, index):
         return self.data_local_dict[index]
@@ -69,7 +68,7 @@ class GraphPartitionerNodeLevel(DataPartitioner):
     def __len__(self):
         return len(self.data_local_dict)
 
-    def _perform_partition(self, tvt_num_split=[0.5, 0.2, 0.3], **kwargs):
+    def _perform_partition(self, tvt_num_split=[0.5, 0.2, 0.3]):
         if self.data_name in ["cora", "citeseer", "pubmed"]:
             tvt_num_split = {
                 'cora': [232, 542, INF],

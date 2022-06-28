@@ -3,124 +3,124 @@ import torch
 from torch_geometric.data import Data
 from torch_geometric.loader import GraphSAINTRandomWalkSampler, NeighborSampler
 from fedlab.utils.dataset.partition import DataPartitioner
+from data_preprocessing.splitters.splitter_builder import get_splitter
 
 
-def raw2loader(raw_data, config=None):
-    """Transform a graph into either dataloader for graph-sampling-based mini-batch training
-    or still a graph for full-batch training.
-    Arguments:
-        raw_data (PyG.Data): a raw graph.
-    :returns:
-        sampler (object): a Dict containing loader and subgraph_sampler or still a PyG.Data object.
-    """
+class GraphPartitionerLinkLevel(DataPartitioner):
+    """Graph data partitioner for link-level tasks.
 
-    if config.data.loader == '':
-        sampler = raw_data
-    elif config.data.loader == 'graphsaint-rw':
-        loader = GraphSAINTRandomWalkSampler(
-            raw_data,
-            batch_size=config.data.batch_size,
-            walk_length=config.data.graphsaint.walk_length,
-            num_steps=config.data.graphsaint.num_steps,
-            sample_coverage=0)
-        subgraph_sampler = NeighborSampler(raw_data.edge_index,
-                                           sizes=[-1],
-                                           batch_size=4096,
-                                           shuffle=False,
-                                           num_workers=config.data.num_workers)
-        sampler = dict(data=raw_data,
-                       train=loader,
-                       val=subgraph_sampler,
-                       test=subgraph_sampler)
-    else:
-        raise TypeError('Unsupported DataLoader Type {}'.format(
-            config.data.loader))
+        Partition link-task graph data given specific client number and splitter method.
+        Currently, 2 supported partition schemes can be achieved by passing `splitter_type` parameter in initialization:
 
-    return sampler
+        - label_space_splitter:
+          - ``split_type="rel_type"``: It is used to provide label distribution skew. For link-prediction classification
+          tasks, e.g., relation prediction for knowledge graph completion, the existing triplets are split into the
+          clients by latent dirichlet allocation (LDA)
+            Optional params:
+                - alpha (float): parameter controlling the identicalness in LDA among clients. Default to `0.5`
+                - realloc_mask (boolean): controlling whether to re-allocation indices of clients' inner data. Default to `False`
 
+        - meta_splitter:
+        Simulate a real FL setting via splitting the graph based on the meta data or the values of those attributes, which
+        naturally leads to non-iid
+          - Applied dataset: RecSys, fixed 28 graphs for `ciao` and 3 graphs for `epinions`
+          - There is no specific ``split_type`` parameter value setting for meta_splitter
 
-def load_linklevel_dataset(config=None):
-    r"""
-    :returns:
-        data_local_dict
-    :rtype:
-        (Dict): dict{'client_id': Data()}
-    """
-    path = config.data.root
-    name = config.data.type.lower()
+        Args:
+            data_name (str): Name of dataset, only ``"cora"``, ``"epinions"``, ``"fb15k-237"``, ``"wn18"``, `
+                `"fb15k"`` and ``"toy"`` are accepted currently.
+            data_path (str): Path of dataset saving
+            client_num (int): Number of clients for data partition.
+            split_type (str): Split type, only ``"rel_type"`` and ``None`` are accepted by node tasks.
+            transforms_funcs (dict): transforms functions for dataset, which are built from `get_transform` function.
+            **kwargs: Params for split method.
+        """
 
-    # Splitter
-    splitter = get_splitter(config)
+    def __init__(self,
+                 data_name,
+                 data_path,
+                 client_num,
+                 split_type,
+                 loader_config={
+                     'method': '',
+                     'batch_size': 128,
+                 },
+                 transforms_funcs={},
+                 **kwargs):
+        self.data_name = data_name.lower()
+        self.data_path = data_path
+        self.splitter = get_splitter(split_type, client_num, **kwargs)
+        self.loader_config = loader_config
+        self.transforms_funcs = transforms_funcs
+        self._perform_partition(**kwargs)
 
-    # Transforms
-    transforms_funcs = get_transform(config, 'torch_geometric')
+        self.client_num = client_num
+        self.num_classes = self.global_dataset.data.edge_type.max().item() + 1
+        self.num_features = self.global_dataset.data.x.shape[-1]
 
-    if name in ['epinions', 'ciao']:
-        from federatedscope.gfl.dataset.recsys import RecSys
-        dataset = RecSys(path,
-                         name,
-                         FL=True,
-                         splits=config.data.splits,
-                         **transforms_funcs)
-        global_dataset = RecSys(path,
-                                name,
-                                FL=False,
-                                splits=config.data.splits,
-                                **transforms_funcs)
-    elif name in ['fb15k-237', 'wn18', 'fb15k', 'toy']:
-        from federatedscope.gfl.dataset.kg import KG
-        dataset = KG(path, name, **transforms_funcs)
-        dataset = splitter(dataset[0])
-        global_dataset = KG(path, name, **transforms_funcs)
-    else:
-        raise ValueError(f'No dataset named: {name}!')
+    def __getitem__(self, index):
+        return self.data_local_dict[index]
 
-    dataset = [ds for ds in dataset]
-    client_num = min(len(dataset), config.federate.client_num
-                     ) if config.federate.client_num > 0 else len(dataset)
-    config.merge_from_list(['federate.client_num', client_num])
+    def __len__(self):
+        return len(self.data_local_dict)
 
-    # get local dataset
-    data_local_dict = dict()
+    def _perform_partition(self, num_split=[0.5, 0.2, 0.3], **kwargs):
+        if self.data_name in ['epinions', 'ciao']:
+            from data_preprocessing.dataset.recom_sys import RecSys
+            self.global_dataset = RecSys(self.data_path,
+                                         self.data_name,
+                                         FL=False,
+                                         splits=num_split,
+                                         **self.transforms_funcs)
+            self.split_dataset = RecSys(self.data_path,
+                                        self.data_name,
+                                        FL=True,
+                                        splits=num_split,
+                                        **self.transforms_funcs)
 
-    for client_idx in range(len(dataset)):
-        local_data = raw2loader(dataset[client_idx], config)
-        data_local_dict[client_idx + 1] = local_data
+        elif self.data_name in ['fb15k-237', 'wn18', 'fb15k', 'toy']:
+            from data_preprocessing.dataset.kg import KG
+            self.global_dataset = KG(self.data_path, self.data_name, **self.transforms_funcs)
+            self.split_dataset = self.splitter(self.global_dataset[0])
+        else:
+            raise ValueError(f'No dataset named: {self.data_name}!')
 
-    if global_dataset is not None:
-        # Recode train & valid & test mask for global data
-        global_graph = global_dataset[0]
-        train_edge_mask = torch.BoolTensor([])
-        valid_edge_mask = torch.BoolTensor([])
-        test_edge_mask = torch.BoolTensor([])
-        global_edge_index = torch.LongTensor([[], []])
-        global_edge_type = torch.LongTensor([])
+        dataset = [ds for ds in self.split_dataset]
+        self.data_local_dict = dict()
 
-        for client_sampler in data_local_dict.values():
-            if isinstance(client_sampler, Data):
-                client_subgraph = client_sampler
-            else:
-                client_subgraph = client_sampler['data']
-            orig_index = torch.zeros_like(client_subgraph.edge_index)
-            orig_index[0] = client_subgraph.index_orig[
-                client_subgraph.edge_index[0]]
-            orig_index[1] = client_subgraph.index_orig[
-                client_subgraph.edge_index[1]]
-            train_edge_mask = torch.cat(
-                (train_edge_mask, client_subgraph.train_edge_mask), dim=-1)
-            valid_edge_mask = torch.cat(
-                (valid_edge_mask, client_subgraph.valid_edge_mask), dim=-1)
-            test_edge_mask = torch.cat(
-                (test_edge_mask, client_subgraph.test_edge_mask), dim=-1)
-            global_edge_index = torch.cat((global_edge_index, orig_index),
-                                          dim=-1)
-            global_edge_type = torch.cat(
-                (global_edge_type, client_subgraph.edge_type), dim=-1)
-        global_graph.train_edge_mask = train_edge_mask
-        global_graph.valid_edge_mask = valid_edge_mask
-        global_graph.test_edge_mask = test_edge_mask
-        global_graph.edge_index = global_edge_index
-        global_graph.edge_type = global_edge_type
-        data_local_dict[0] = raw2loader(global_graph, config)
+        for client_idx in range(len(dataset)):
+            local_data = self.raw2loader(dataset[client_idx])
+            self.data_local_dict[client_idx] = local_data
 
-    return data_local_dict, config
+    def raw2loader(self, raw_data):
+        """Transform a graph into either dataloader for graph-sampling-based mini-batch training
+        or still a graph for full-batch training.
+        Arguments:
+            raw_data (PyG.Data): a raw graph.
+        :returns:
+            sampler (object): a Dict containing loader and subgraph_sampler or still a PyG.Data object.
+        """
+
+        if self.loader_config['method'] == '':
+            sampler = raw_data
+        elif self.loader_config['method'] == 'graphsaint-rw':
+            loader = GraphSAINTRandomWalkSampler(
+                raw_data,
+                batch_size=self.loader_config["batch_size"],
+                walk_length=self.loader_config["walk_length"],
+                num_steps=self.loader_config["num_steps"],
+                sample_coverage=0)
+            subgraph_sampler = NeighborSampler(raw_data.edge_index,
+                                               sizes=[-1],
+                                               batch_size=4096,
+                                               shuffle=False,
+                                               num_workers=self.loader_config["num_workers"])
+            sampler = dict(data=raw_data,
+                           train=loader,
+                           val=subgraph_sampler,
+                           test=subgraph_sampler)
+        else:
+            raise TypeError('Unsupported DataLoader Type {}'.format(
+                self.loader_config['method']))
+
+        return sampler

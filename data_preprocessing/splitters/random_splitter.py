@@ -2,6 +2,7 @@ import torch
 
 from torch_geometric.transforms import BaseTransform
 from torch_geometric.utils import to_networkx, from_networkx
+from fedlab.utils.dataset.functional import lognormal_unbalance_split, dirichlet_unbalance_split
 
 import numpy as np
 import networkx as nx
@@ -12,45 +13,37 @@ EPSILON = 1e-5
 class RandomSplitter(BaseTransform):
     r"""
     Split Data into small data via random sampling.
-    
+
     Args:
         client_num (int): Split data into client_num of pieces.
-        sampling_rate (str): Samples of the unique nodes for each client, eg. '0.2,0.2,0.2'.
+        random_type (int): Random sampling method. Accepted: 0 for ``"lognormal"`` and others for `"dirichlet"`
+        split_param (float): Param for the corresponding ``random_type`` sampling method.
+        sum_rate (float): Sum of samples of the unique nodes for each client, default to 1
         overlapping_rate(float): Additional samples of overlapping data, eg. '0.4'
         drop_edge(float): Drop edges (drop_edge / client_num) for each client whthin overlapping part.
         
     """
     def __init__(self,
                  client_num,
-                 sampling_rate=None,
+                 random_type=0,
+                 split_param=0,
+                 sum_rate=1,
                  overlapping_rate=0,
                  drop_edge=0):
 
+        self.random_type = random_type
+        self.split_param = split_param
+        self.sum_rate = sum_rate
         self.ovlap = overlapping_rate
-
-        if sampling_rate is not None:
-            self.sampling_rate = np.array(
-                [float(val) for val in sampling_rate.split(',')])
-        else:
-            # Default: Average
-            self.sampling_rate = (np.ones(client_num) -
-                                  self.ovlap) / client_num
-
-        if len(self.sampling_rate) != client_num:
+        if abs((sum_rate + self.ovlap) - 1) > EPSILON:
             raise ValueError(
-                f'The client_num ({client_num}) should be equal to the lenghth of sampling_rate and overlapping_rate.'
-            )
-
-        if abs((sum(self.sampling_rate) + self.ovlap) - 1) > EPSILON:
-            raise ValueError(
-                f'The sum of sampling_rate:{self.sampling_rate} and overlapping_rate({self.ovlap}) should be 1.'
+                f'The sum of sampling_rate:{self.sum_rate} and overlapping_rate({self.ovlap}) should be 1.'
             )
 
         self.client_num = client_num
         self.drop_edge = drop_edge
 
     def __call__(self, data):
-
         data.index_orig = torch.arange(data.num_nodes)
         G = to_networkx(
             data,
@@ -62,17 +55,20 @@ class RandomSplitter(BaseTransform):
                                name="index_orig")
         client_node_idx = {idx: [] for idx in range(self.client_num)}
 
-        indices = np.random.permutation(data.num_nodes)
-        sum_rate = 0
-        for idx, rate in enumerate(self.sampling_rate):
-            client_node_idx[idx] = indices[round(sum_rate *
-                                                 data.num_nodes):round(
-                                                     (sum_rate + rate) *
-                                                     data.num_nodes)]
-            sum_rate += rate
+        indices = np.random.permutation(round(self.sum_rate * data.num_nodes))
+
+        if self.random_type == 0:
+            self.client_sample_nums = lognormal_unbalance_split(self.client_num, data.num_nodes, unbalance_sgm=self.split_param)
+        else:
+            self.client_sample_nums = dirichlet_unbalance_split(self.client_num, data.num_nodes, alpha=self.split_param)
+
+        node_count = 0
+        for idx, sample_num in enumerate(self.client_sample_nums):
+            client_node_idx[idx] = indices[node_count: node_count+sample_num]
+            node_count += sample_num
 
         if self.ovlap:
-            ovlap_nodes = indices[round(sum_rate * data.num_nodes):]
+            ovlap_nodes = indices[round(self.sum_rate * data.num_nodes):]
             for idx in client_node_idx:
                 client_node_idx[idx] = np.concatenate(
                     (client_node_idx[idx], ovlap_nodes))

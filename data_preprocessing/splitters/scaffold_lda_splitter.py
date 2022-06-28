@@ -5,8 +5,9 @@ import torch
 from rdkit import Chem
 from rdkit import RDLogger
 from rdkit.Chem.Scaffolds import MurckoScaffold
-from federatedscope.core.splitters.utils import dirichlet_distribution_noniid_slice
-from federatedscope.core.splitters.graph.scaffold_splitter import generate_scaffold
+
+from fedlab.utils.dataset.functional import hetero_dir_partition
+from data_preprocessing.splitters.scaffold_splitter import generate_scaffold
 
 logger = logging.getLogger(__name__)
 
@@ -140,10 +141,12 @@ def gen_scaffold_lda_split(dataset, client_num=5, alpha=0.1):
     label = np.zeros(len(dataset))
     for i in range(len(scaffold_list)):
         label[scaffold_list[i]] = i+1
-    label = torch.LongTensor(label)
     # Split data to list
-    idx_slice = dirichlet_distribution_noniid_slice(label, client_num, alpha)
-    return idx_slice
+    idx_slice = hetero_dir_partition(targets=label,
+                                     num_clients=client_num,
+                                     num_classes=len(np.unique(label)),
+                                     dir_alpha=alpha)
+    return [val for val in idx_slice.values()]
 
 
 class ScaffoldLdaSplitter:

@@ -1,5 +1,5 @@
 import torch
-
+import numpy as np
 from torch_geometric.data import Data
 from torch_geometric.utils import from_networkx, to_undirected
 from torch_geometric.transforms import BaseTransform, RemoveIsolatedNodes
@@ -17,6 +17,7 @@ class RelTypeSplitter(BaseTransform):
         alpha (float): parameter controlling the identicalness among clients.
         
     """
+
     def __init__(self, client_num, alpha=0.5, realloc_mask=False):
         self.client_num = client_num
         self.alpha = alpha
@@ -25,14 +26,15 @@ class RelTypeSplitter(BaseTransform):
     def __call__(self, data):
         data_list = []
         label = data.edge_type.numpy()  # only used for link prediction
-        idx_slice = hetero_dir_partition(
-            label, self.client_num, self.alpha)
-        print(idx_slice)
+        idx_slice = hetero_dir_partition(targets=label,
+                                         num_clients=self.client_num,
+                                         num_classes=len(np.unique(label)),
+                                         dir_alpha=self.alpha)
         # Reallocation train/val/test mask
         train_ratio = data.train_edge_mask.sum().item() / data.num_edges
         valid_ratio = data.valid_edge_mask.sum().item() / data.num_edges
         test_ratio = data.test_edge_mask.sum().item() / data.num_edges
-        for idx_j in idx_slice:
+        for idx_j in idx_slice.values():
             edge_index = data.edge_index.T[idx_j].T
             edge_type = data.edge_type[idx_j]
             train_edge_mask = data.train_edge_mask[idx_j]

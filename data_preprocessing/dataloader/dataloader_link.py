@@ -28,7 +28,7 @@ class LinkLevelPartitioner(DataPartitioner):
           - There is no specific ``split_type`` parameter value setting for meta_splitter
 
         Args:
-            data_name (str): Name of dataset, only ``"cora"``, ``"epinions"``, ``"fb15k-237"``, ``"wn18"``, `
+            data_name (str): Name of dataset, only ``"ciao"``, ``"epinions"``, ``"fb15k-237"``, ``"wn18"``, `
                 `"fb15k"`` and ``"toy"`` are accepted currently.
             data_path (str): Path of dataset saving
             client_num (int): Number of clients for data partition.

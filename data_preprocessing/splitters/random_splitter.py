@@ -1,3 +1,6 @@
+# Codes below are copied and modified from
+# https://github.com/alibaba/FederatedScope/blob/master/federatedscope/core/splitters/graph/random_splitter.py
+
 import torch
 
 from torch_geometric.transforms import BaseTransform

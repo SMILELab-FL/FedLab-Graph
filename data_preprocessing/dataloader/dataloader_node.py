@@ -69,6 +69,14 @@ class NodeLevelPartitioner(DataPartitioner):
         return len(self.data_local_dict)
 
     def _perform_partition(self, tvt_num_split=[0.5, 0.2, 0.3]):
+        """
+        Get global data and perform data partition to get split data clients with self.splitter
+        Codes are copied and modified from
+        https://github.com/alibaba/FederatedScope/blob/master/federatedscope/gfl/dataloader/dataloader_node.py
+
+        Args:
+            tvt_num_split (list): percentage list of train data, valid data and test data. Default=[0.5, 0.2, 0.3]
+        """
         if self.data_name in ["cora", "citeseer", "pubmed"]:
             tvt_num_split = {
                 'cora': [232, 542, INF],

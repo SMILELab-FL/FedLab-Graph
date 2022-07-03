@@ -1,3 +1,5 @@
+# Codes below are copied from
+# https://github.com/alibaba/FederatedScope/blob/master/federatedscope/core/splitters/generic/lda_splitter.py
 import numpy as np
 from fedlab.utils.dataset.functional import hetero_dir_partition
 

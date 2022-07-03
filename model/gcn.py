@@ -1,3 +1,6 @@
+# Codes below are copied from
+# https://github.com/alibaba/FederatedScope/blob/master/federatedscope/gfl/model/gcn.py
+
 import torch
 import torch.nn.functional as F
 from torch.nn import ModuleList

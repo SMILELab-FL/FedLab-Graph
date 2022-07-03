@@ -1,3 +1,6 @@
+# Codes below are copied from
+# https://github.com/alibaba/FederatedScope/blob/master/federatedscope/gfl/model/fedsageplus.py
+
 from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division

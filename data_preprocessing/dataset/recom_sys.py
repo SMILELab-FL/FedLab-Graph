@@ -1,3 +1,6 @@
+# Codes below are copied from
+# https://github.com/alibaba/FederatedScope/blob/master/federatedscope/core/splitters/graph/analyzer.py
+
 import os
 
 import numpy as np
@@ -75,6 +78,8 @@ def read_RecSys(path, FL=False):
 
 class RecSys(InMemoryDataset):
     r"""
+    Create this dataset from the user-item interactions collected from an E-commerce platform.
+    Split the graph by each item’s category or by which scenario an interaction happens.
     Arguments:
         root (string): Root directory where the dataset should be saved.
         name (string): The name of the dataset (:obj:`"epinions"`, :obj:`"ciao"`).

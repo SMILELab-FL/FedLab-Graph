@@ -1,3 +1,6 @@
+# Codes below are copied from
+# https://github.com/alibaba/FederatedScope/blob/master/federatedscope/core/auxiliaries/transform_builder.py
+
 from importlib import import_module
 import run.utils.register as register
 

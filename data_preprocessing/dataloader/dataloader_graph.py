@@ -1,5 +1,5 @@
 import numpy as np
-
+from typing import Dict, Tuple, List
 from torch_geometric import transforms
 from torch_geometric.loader import DataLoader
 from torch_geometric.datasets import TUDataset, MoleculeNet
@@ -83,6 +83,14 @@ class GraphLevelPartitioner(DataPartitioner):
         return len(s)
 
     def _perform_partition(self, tvt_num_split=[0.8, 0.1, 0.1]):
+        """
+        Get global data and perform data partition to get split data clients with self.splitter
+        Codes are copied and modified from
+        https://github.com/alibaba/FederatedScope/blob/master/federatedscope/gfl/dataloader/dataloader_graph.py
+
+        Args:
+            tvt_num_split (list): percentage list of train data, valid data and test data. Default=[0.8, 0.1, 0.1]
+        """
         self.multi_graph = False
 
         if self.data_name in [
@@ -163,6 +171,14 @@ class GraphLevelPartitioner(DataPartitioner):
         self._raw2loader(self.split_dataset, tvt_num_split)
 
     def _raw2loader(self, raw_data_list, tvt_num_split):
+        """
+        Transform each split dataset into dataloader for graph-sampling-based mini-batch training
+        Codes are copied from
+        https://github.com/alibaba/FederatedScope/blob/master/federatedscope/gfl/dataloader/dataloader_graph.py
+
+        Args:
+            raw_data_list (List[PyG.Data]): list for raw pyg data.
+        """
         # Build train/valid/test dataloader
         raw_train = []
         raw_valid = []
@@ -186,11 +202,11 @@ class GraphLevelPartitioner(DataPartitioner):
                                    shuffle=False),
             }
             self.data_local_dict[client_idx] = dataloader
-            raw_train = raw_train + [gs[idx] for idx in train_idx]
-            raw_valid = raw_valid + [gs[idx] for idx in valid_idx]
-            raw_test = raw_test + [gs[idx] for idx in test_idx]
+            # raw_train = raw_train + [gs[idx] for idx in train_idx]
+            # raw_valid = raw_valid + [gs[idx] for idx in valid_idx]
+            # raw_test = raw_test + [gs[idx] for idx in test_idx]
         # if not self.multi_graph:
-        #     self.data_local_dict[0] = {
+        #     self.data_local_dict[self.client_num] = {
         #         'train': DataLoader(raw_train, self.batch_size, shuffle=True),
         #         'val': DataLoader(raw_valid, self.batch_size, shuffle=False),
         #         'test': DataLoader(raw_test, self.batch_size, shuffle=False),

@@ -1,3 +1,7 @@
+# Codes below are copied and modified from
+# https://github.com/alibaba/FederatedScope/blob/master/federatedscope/core/splitters/graph/graphtype_splitter.py
+# Modified: using `fedlab.utils.dataset.functional.hetero_dir_partition` method
+
 import numpy as np
 from fedlab.utils.dataset.functional import hetero_dir_partition
 

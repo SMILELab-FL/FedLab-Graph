@@ -1,3 +1,6 @@
+# Codes below are copied from
+# https://github.com/alibaba/FederatedScope/blob/master/federatedscope/gfl/model/link_level.py
+
 import torch
 from torch_geometric.data import Data
 

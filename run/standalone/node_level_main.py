@@ -10,7 +10,7 @@ import uuid
 BASE_DIR = Path(__file__).resolve().parents[2]
 sys.path.append("../../")
 
-from run.utils.functional import random_seed_init
+from run.utils.functional import random_seed_init, draw_graph
 from fedlab.utils.aggregator import Aggregators
 from fedlab.utils.serialization import SerializationTool
 from fedlab.utils.functional import get_best_gpu
@@ -44,9 +44,9 @@ gs = NodeLevelPartitioner(data_name=args.dataset,
                           data_path=Path(args.data_root) / args.task,
                           client_num=total_client_num,
                           split_type='louvain',
-                          delta=10
+                          delta=80,
                           # random_type=0,
-                          # split_param=1,
+                          # split_param=0.5,
                           )
 
 # get model

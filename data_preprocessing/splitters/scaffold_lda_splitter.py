@@ -1,3 +1,7 @@
+# Codes below are copied and modified from
+# https://github.com/alibaba/FederatedScope/blob/master/federatedscope/core/splitters/graph/scaffold_lda_splitter.py
+# Modified: using `fedlab.utils.dataset.functional.hetero_dir_partition` method
+
 import logging
 import numpy as np
 import torch

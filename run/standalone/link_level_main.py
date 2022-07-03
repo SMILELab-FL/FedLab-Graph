@@ -10,7 +10,7 @@ import uuid
 BASE_DIR = Path(__file__).resolve().parents[2]
 sys.path.append("../../")
 
-from run.utils.functional import random_seed_init
+from run.utils.functional import random_seed_init, draw_graph, draw_distribution_histogram
 from fedlab.utils.aggregator import Aggregators
 from fedlab.utils.serialization import SerializationTool
 from fedlab.utils.functional import get_best_gpu
@@ -22,9 +22,9 @@ from run.utils.transform_builder import get_transform
 # configuration
 parser = argparse.ArgumentParser(description="Standalone link training example")
 parser.add_argument("--task", type=str, default='link_level')
-parser.add_argument("--dataset", type=str, default='wn18')
+parser.add_argument("--dataset", type=str, default='ciao')
 parser.add_argument("--data_root", type=str, default='../../data/')
-parser.add_argument("--total_client", type=int, default=10)
+parser.add_argument("--total_client", type=int, default=20)
 parser.add_argument("--com_round", type=int, default=50)
 parser.add_argument("--sample_ratio", type=float, default=1)
 parser.add_argument("--epochs", type=int, default=20)
@@ -56,6 +56,11 @@ gs = LinkLevelPartitioner(data_name=args.dataset,
                           split_type='rel_type',
                           loader_config=loader_config,
                           transforms_funcs=transforms_funcs)
+
+for i in range(len(gs)):
+    draw_distribution_histogram(gs[i].edge_type, title=f"Client {i}")
+    # draw_graph(gs[i])
+    print(gs[i])
 
 # get model
 args.cuda = True if torch.cuda.is_available() else False

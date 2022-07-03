@@ -1,3 +1,6 @@
+# Codes below are copied from
+# https://github.com/alibaba/FederatedScope/blob/master/federatedscope/gfl/model/gpr.py
+
 import torch
 import torch.nn.functional as F
 import numpy as np

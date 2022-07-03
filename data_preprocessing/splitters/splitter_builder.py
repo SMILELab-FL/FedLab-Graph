@@ -1,3 +1,6 @@
+# Codes below are copied from
+# https://github.com/alibaba/FederatedScope/blob/master/federatedscope/core/auxiliaries/splitter_builder.py
+
 import logging
 logger = logging.getLogger(__name__)
 

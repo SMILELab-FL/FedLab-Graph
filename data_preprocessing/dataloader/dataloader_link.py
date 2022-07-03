@@ -66,6 +66,14 @@ class LinkLevelPartitioner(DataPartitioner):
         return len(self.data_local_dict)
 
     def _perform_partition(self, tvt_num_split=[0.8, 0.1, 0.1]):
+        """
+        Get global data and perform data partition to get split data clients with self.splitter
+        Codes are copied and modified from
+        https://github.com/alibaba/FederatedScope/blob/master/federatedscope/gfl/dataloader/dataloader_link.py
+
+        Args:
+            tvt_num_split (list): percentage list of train data, valid data and test data. Default=[0.8, 0.1, 0.1]
+        """
         if 'pre_transform' not in self.transforms_funcs:
             print(f'pre_transform is None! Using the default Constant pre_transform function')
             self.transforms_funcs['pre_transform'] = transforms.Constant(value=1.0,
@@ -100,9 +108,12 @@ class LinkLevelPartitioner(DataPartitioner):
     def _raw2loader(self, raw_data):
         """Transform a graph into either dataloader for graph-sampling-based mini-batch training
         or still a graph for full-batch training.
-        Arguments:
+        Codes are copied from
+        https://github.com/alibaba/FederatedScope/blob/master/federatedscope/gfl/dataloader/dataloader_link.py
+
+        Args:
             raw_data (PyG.Data): a raw graph.
-        :returns:
+        Returns:
             sampler (object): a Dict containing loader and subgraph_sampler or still a PyG.Data object.
         """
 

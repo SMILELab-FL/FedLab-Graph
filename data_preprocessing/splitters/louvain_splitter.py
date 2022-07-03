@@ -1,3 +1,7 @@
+# Codes below are copied from
+# https://github.com/alibaba/FederatedScope/blob/master/federatedscope/core/splitters/graph/louvain_splitter.py
+
+
 import torch
 
 from torch_geometric.transforms import BaseTransform

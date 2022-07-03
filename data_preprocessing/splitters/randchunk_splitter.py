@@ -1,3 +1,6 @@
+# Codes below are copied from
+# https://github.com/alibaba/FederatedScope/blob/master/federatedscope/core/splitters/graph/randchunk_splitter.py
+
 import numpy as np
 
 

@@ -10,7 +10,7 @@ import uuid
 BASE_DIR = Path(__file__).resolve().parents[2]
 sys.path.append("../../")
 
-from run.utils.functional import random_seed_init
+from run.utils.functional import random_seed_init, draw_distribution_histogram
 from fedlab.utils.aggregator import Aggregators
 from fedlab.utils.serialization import SerializationTool
 from fedlab.utils.functional import get_best_gpu
@@ -22,9 +22,9 @@ from run.utils.transform_builder import get_transform
 # configuration
 parser = argparse.ArgumentParser(description="Standalone link training example")
 parser.add_argument("--task", type=str, default='graph_level')
-parser.add_argument("--dataset", type=str, default='IMDB-BINARY')
+parser.add_argument("--dataset", type=str, default='hiv')
 parser.add_argument("--data_root", type=str, default='../../data/')
-parser.add_argument("--total_client", type=int, default=10)
+parser.add_argument("--total_client", type=int, default=20)
 parser.add_argument("--com_round", type=int, default=50)
 parser.add_argument("--sample_ratio", type=float, default=1)
 parser.add_argument("--epochs", type=int, default=20)
@@ -57,10 +57,15 @@ transforms_funcs = get_transform({'pre_transform': ['Constant', {'value': 1.0, '
 gs = GraphLevelPartitioner(data_name=args.dataset,
                            data_path=Path(args.data_root) / args.task,
                            client_num=total_client_num,
-                           split_type='graph_type',
+                           split_type='scaffold',
                            # loader_config=loader_config,
                            transforms_funcs=transforms_funcs,
                            batch_size=args.batch_size)
+for i in range(len(gs.split_dataset)):
+    data = [g.y for g in gs.split_dataset[i]]
+    draw_distribution_histogram(data, title=f"Client {i}")
+    # draw_graph(gs[i])
+    print(gs[i])
 
 # get model
 args.cuda = True if torch.cuda.is_available() else False

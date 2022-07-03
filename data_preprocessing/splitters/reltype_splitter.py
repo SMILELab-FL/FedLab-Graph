@@ -1,3 +1,7 @@
+# Codes below are copied and modified from
+# https://github.com/alibaba/FederatedScope/blob/master/federatedscope/core/splitters/graph/reltype_splitter.py
+# Modified: using `fedlab.utils.dataset.functional.hetero_dir_partition` method
+
 import torch
 import numpy as np
 from torch_geometric.data import Data

@@ -10,7 +10,7 @@ import uuid
 BASE_DIR = Path(__file__).resolve().parents[2]
 sys.path.append("../../")
 
-from run.utils.functional import random_seed_init, draw_distribution_histogram
+from run.utils.functional import random_seed_init
 from fedlab.utils.aggregator import Aggregators
 from fedlab.utils.serialization import SerializationTool
 from fedlab.utils.functional import get_best_gpu
@@ -61,11 +61,6 @@ gs = GraphLevelPartitioner(data_name=args.dataset,
                            # loader_config=loader_config,
                            transforms_funcs=transforms_funcs,
                            batch_size=args.batch_size)
-for i in range(len(gs.split_dataset)):
-    data = [g.y for g in gs.split_dataset[i]]
-    draw_distribution_histogram(data, title=f"Client {i}")
-    # draw_graph(gs[i])
-    print(gs[i])
 
 # get model
 args.cuda = True if torch.cuda.is_available() else False

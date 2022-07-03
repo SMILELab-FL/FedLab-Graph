@@ -10,7 +10,7 @@ import uuid
 BASE_DIR = Path(__file__).resolve().parents[2]
 sys.path.append("../../")
 
-from run.utils.functional import random_seed_init, draw_graph
+from run.utils.functional import random_seed_init
 from fedlab.utils.aggregator import Aggregators
 from fedlab.utils.serialization import SerializationTool
 from fedlab.utils.functional import get_best_gpu

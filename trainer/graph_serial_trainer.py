@@ -78,7 +78,12 @@ class GraphMiniBatchSubsetSerialTrainer(SerialTrainer):
         return loss_.avg, acc_.avg
 
     # evaluate all clients
-    def evaluate(self, global_model_param, is_valid=True):
+    def evaluate(self, eval_model_param=None, is_valid=True):
+        # load eval_model_param for test
+        if eval_model_param is not None:
+            temp_global = self.model_parameters
+            SerializationTool.deserialize_model(self._model, eval_model_param)
+
         loss_ = AverageMeter()
         acc_ = AverageMeter()
 
@@ -88,6 +93,10 @@ class GraphMiniBatchSubsetSerialTrainer(SerialTrainer):
             loss, acc = self._evaluate_alone(data_loader)
             loss_.update(loss)
             acc_.update(acc)
-            print("client {} - val loss: {:.4f}, acc: {:.2f}".format(client_id, loss, acc))
+            # print("client {} - val loss: {:.4f}, acc: {:.2f}".format(client_id, loss, acc))
+
+        # revert to current global model
+        if eval_model_param is not None:
+            SerializationTool.deserialize_model(self._model, temp_global)
 
         return loss_.avg, acc_.avg

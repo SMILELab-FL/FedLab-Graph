@@ -59,6 +59,7 @@ aggregator = Aggregators.fedavg_aggregate
 # fedlab setup, load model in the best gpu
 trainer = NodeFullBatchSubsetSerialTrainer(model=model,
                                            client_dict=gs.data_local_dict,
+                                           # global_data=gs.global_dataset[0],
                                            cuda=args.cuda,
                                            args={
                                                "epochs": args.epochs,

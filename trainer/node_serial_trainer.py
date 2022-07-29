@@ -43,6 +43,10 @@ class NodeFullBatchSubsetSerialTrainer(SerialTrainer):
             loss.backward()
             optimizer.step()
 
+            pred = output.argmax(dim=1)
+
+        acc = torch.sum(pred[train_mask].eq(data.y[train_mask])).item() / int(train_mask.sum())
+        self._LOGGER.info("LOCAL - train loss: {:.4f}, acc: {:.2f}".format(loss, acc))
         # loss, acc = self._evaluate_alone(train_loader, is_valid=True)
         # self._LOGGER.info("LOCAL - val loss: {:.4f}, acc: {:.2f}".format(loss, acc))
 

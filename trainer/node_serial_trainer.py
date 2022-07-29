@@ -98,3 +98,74 @@ class NodeFullBatchSubsetSerialTrainer(SerialTrainer):
 
         return loss_.avg, acc_.avg
 
+
+class GlobalTestNodeFullBatchSubsetSerialTrainer(NodeFullBatchSubsetSerialTrainer):
+    def __init__(self,
+                 model,
+                 client_dict,
+                 global_data,
+                 logger=None,
+                 cuda=False,
+                 args={
+                     "epochs": 5,
+                     "lr": 0.1,
+                     "weight_decay": 5e-4
+                 }) -> None:
+        super(GlobalTestNodeFullBatchSubsetSerialTrainer, self).__init__(model,
+                                                                         client_dict,
+                                                                         logger,
+                                                                         cuda,
+                                                                         args)
+        self.global_data = global_data
+
+    def _evaluate_alone(self, is_valid=True, test_data=None):
+        """Evaluate classify task model accuracy."""
+        self.model.eval()
+        criterion = torch.nn.CrossEntropyLoss()
+
+        loss_ = AverageMeter()
+        acc_ = AverageMeter()
+
+        with torch.no_grad():
+            if test_data is None:
+                test_data = self.global_data
+            data = test_data.cuda(self.gpu) if self.cuda else self.global_data
+            mask = data.val_mask if is_valid else data.test_mask
+
+            output = self.model(data)
+            labels = data.y[mask]
+            loss = criterion(output[mask], labels)
+
+            pred = output.argmax(dim=1)
+
+            loss_.update(loss.item())
+            acc_.update(torch.sum(pred[mask].eq(labels)).item(), int(mask.sum()))
+
+        return loss_.avg, acc_.avg
+
+    # evaluate all clients
+    def evaluate(self, eval_model_param=None, is_valid=True, global_test=True):
+        # load eval_model_param for test
+        if eval_model_param is not None:
+            temp_global = self.model_parameters
+            SerializationTool.deserialize_model(self._model, eval_model_param)
+
+        loss_ = AverageMeter()
+        acc_ = AverageMeter()
+
+        for client_id in range(self.client_num):
+            if global_test:
+                loss, acc = self._evaluate_alone(is_valid, test_data=None)
+                loss_.update(loss)
+                acc_.update(acc)
+                break
+            else:
+                loss, acc = self._evaluate_alone(is_valid, test_data=self._get_dataloader(client_id))
+                loss_.update(loss)
+                acc_.update(acc)
+
+        # revert to current global model
+        if eval_model_param is not None:
+            SerializationTool.deserialize_model(self._model, temp_global)
+
+        return loss_.avg, acc_.avg

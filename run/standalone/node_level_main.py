@@ -69,7 +69,7 @@ trainer = NodeFullBatchSubsetSerialTrainer(model=model,
 # train procedure
 to_select = [i for i in range(total_client_num)]
 acc_list = []
-test_freq = 10
+valid_freq = 10
 
 # best model pt
 checkpt_folder = BASE_DIR / f'trained_model_dict/{args.task}/{args.dataset}/'
@@ -86,16 +86,16 @@ for rd in range(args.com_round):
     SerializationTool.deserialize_model(model, aggregator(parameters_list))
 
     # valid evaluate
-    val_loss, val_acc = trainer.evaluate(is_valid=True)
-    if val_loss < best_val_loss:
-        best_val_loss = val_loss
-        torch.save(model.state_dict(), checkpt_file)
+    if rd % valid_freq == 0:
+        val_loss, val_acc = trainer.evaluate(is_valid=True)
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            torch.save(model.state_dict(), checkpt_file)
 
-    print("After round{} - val loss: {:.4f}, acc: {:.2f}".format(rd, val_loss, val_acc))
+        print("After round{} - val loss: {:.4f}, acc: {:.2f}".format(rd, val_loss, val_acc))
 
-    # test evaluate
-    if rd % test_freq == 0:
-        temp_model.load_state_dict(torch.load(checkpt_file))
-        temp_model_parameters = SerializationTool.serialize_model(temp_model)
-        test_loss, test_acc = trainer.evaluate(temp_model_parameters, is_valid=False)
-        print("After round{} - test loss: {:.4f}, acc: {:.2f}".format(rd, test_loss, test_acc))
+temp_model.load_state_dict(torch.load(checkpt_file))
+temp_model_parameters = SerializationTool.serialize_model(temp_model)
+test_loss, test_acc = trainer.evaluate(temp_model_parameters, is_valid=False, global_test=True)
+print("After round{} - test loss: {:.4f}, acc: {:.2f}".format(rd, test_loss, test_acc))
+
